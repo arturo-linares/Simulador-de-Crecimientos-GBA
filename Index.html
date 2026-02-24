@@ -1,0 +1,246 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Crecimientos - GBA </title>
+    <style>
+        :root {
+            --gba-bg: #283048; /* Fondo oscuro tipo menú, no modificar!! */
+            --fe-gold: #d4af37;
+            --fe-blue: #2c3e50;
+            --fe-parchment: #fdf5e6;
+            --fe-text: #3e2723;
+            --fe-border: #8b4513;
+        }
+
+        body {
+            background-color: var(--gba-bg);
+            color: var(--fe-text);
+            font-family: 'Verdana', sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .fe-window {
+            background-color: var(--fe-parchment);
+            border: 4px solid var(--fe-border);
+            border-radius: 8px;
+            box-shadow: 0 0 0 2px var(--fe-gold), 10px 10px 20px rgba(0,0,0,0.5);
+            max-width: 950px;
+            width: 100%;
+            padding: 20px;
+            background-image: linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px);
+            background-size: 100% 20px;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(to bottom, #4a90e2, #1a2a6c);
+            color: white;
+            padding: 10px;
+            border: 2px solid var(--fe-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px black;
+        }
+
+        .config-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            background: #e9dcc9;
+            padding: 15px;
+            border: 2px inset var(--fe-border);
+            margin-bottom: 20px;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.7);
+        }
+
+        th {
+            background: var(--fe-blue);
+            color: var(--fe-gold);
+            padding: 8px;
+            border: 1px solid var(--fe-border);
+        }
+
+        td {
+            border: 1px solid var(--fe-border);
+            padding: 5px;
+            text-align: center;
+        }
+
+        input[type="number"] {
+            width: 50px;
+            background: #fff;
+            border: 1px solid var(--fe-border);
+            padding: 4px;
+            font-weight: bold;
+        }
+
+        .level-zone {
+            margin-top: 25px;
+            background: #34495e;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 3px double var(--fe-gold);
+            text-align: center;
+        }
+
+        input[type="range"] {
+            width: 80%;
+            height: 10px;
+            accent-color: var(--fe-gold);
+        }
+
+        .stat-cap-reached {
+            color: #e74c3c;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .star {
+            color: #f1c40f;
+            font-size: 1.5rem;
+            display: none;
+            text-shadow: 1px 1px 1px #000;
+        }
+
+        .active-star { display: inline; }
+    </style>
+</head>
+<body>
+
+<div class="fe-window">
+    <h1>Simulador de Niveles - Gba Edition</h1>
+
+    <div class="config-bar">
+        <div>
+            <label>Nivel Base:</label>
+            <input type="number" id="baseLvl" value="1" min="1" max="20">
+        </div>
+        <div class="checkbox-container">
+            <input type="checkbox" id="prePromote" onchange="calculate()">
+            <label for="prePromote">¿Ya viene promocionado?</label>
+        </div>
+        <p style="grid-column: 1/-1; margin: 0; font-size: 0.8rem; color: #5d4037;">
+            *Si ya viene promocionado (como Marcus), empezará directamente en Nv. 1★
+        </p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Stat</th>
+                <th>Base</th>
+                <th>Crecimiento %</th>
+                <th>Bono Prom.</th>
+                <th>Tope (Cap)</th>
+                <th>Promedio Actual</th>
+            </tr>
+        </thead>
+        <tbody id="statsBody">
+            <tr data-stat="HP"><td>HP</td><td><input type="number" class="base" value="20"></td><td><input type="number" class="growth" value="80"></td><td><input type="number" class="promo" value="0"></td><td><input type="number" class="cap" value="60"></td><td class="res">20</td></tr>
+            <tr data-stat="Str"><td>Str</td><td><input type="number" class="base" value="5"></td><td><input type="number" class="growth" value="40"></td><td><input type="number" class="promo" value="2"></td><td><input type="number" class="cap" value="20"></td><td class="res">5</td></tr>
+            <tr data-stat="Skl"><td>Skl</td><td><input type="number" class="base" value="5"></td><td><input type="number" class="growth" value="40"></td><td><input type="number" class="promo" value="2"></td><td><input type="number" class="cap" value="20"></td><td class="res">5</td></tr>
+            <tr data-stat="Spd"><td>Spd</td><td><input type="number" class="base" value="7"></td><td><input type="number" class="growth" value="45"></td><td><input type="number" class="promo" value="2"></td><td><input type="number" class="cap" value="20"></td><td class="res">7</td></tr>
+            <tr data-stat="Lck"><td>Lck</td><td><input type="number" class="base" value="2"></td><td><input type="number" class="growth" value="30"></td><td><input type="number" class="promo" value="0"></td><td><input type="number" class="cap" value="30"></td><td class="res">2</td></tr>
+            <tr data-stat="Def"><td>Def</td><td><input type="number" class="base" value="3"></td><td><input type="number" class="growth" value="20"></td><td><input type="number" class="promo" value="2"></td><td><input type="number" class="cap" value="20"></td><td class="res">3</td></tr>
+            <tr data-stat="Res"><td>Res</td><td><input type="number" class="base" value="0"></td><td><input type="number" class="growth" value="10"></td><td><input type="number" class="promo" value="2"></td><td><input type="number" class="cap" value="20"></td><td class="res">0</td></tr>
+        </tbody>
+    </table>
+
+    <div class="level-zone">
+        <div style="font-size: 1.4rem; margin-bottom: 10px;">
+            NIVEL: <span id="lvlOut">1</span> <span id="starIcon" class="star">★</span>
+        </div>
+        <input type="range" id="lvlSlider" min="1" max="40" value="1" oninput="calculate()">
+        <div style="margin-top: 5px; font-size: 0.9rem; opacity: 0.8;">
+            Desliza para subir de nivel (El slider simula hasta Nv 20 Promocionado, no pasara de ahi si ya viene promocionado)
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        const baseLvl = parseInt(document.getElementById('baseLvl').value) || 1;
+        const prePromoted = document.getElementById('prePromote').checked;
+        const slider = parseInt(document.getElementById('lvlSlider').value);
+        const starIcon = document.getElementById('starIcon');
+        const lvlOut = document.getElementById('lvlOut');
+
+        let effectiveGrowthLevels = 0;
+        let isPromoted = false;
+        let displayLvl = 1;
+
+        if (prePromoted) {
+            // Caso Marcus: Ya empieza promocionado. El nivel 1 del slider es Nv 1★
+            isPromoted = true;
+            displayLvl = slider > 20 ? 20 : slider; // Tope de nivel 20 promocionado
+            effectiveGrowthLevels = displayLvl - baseLvl;
+        } else {
+            // Caso normal: Empieza base, puede promocionar
+            if (slider <= 20) {
+                isPromoted = false;
+                displayLvl = Math.max(slider, baseLvl);
+                effectiveGrowthLevels = displayLvl - baseLvl;
+            } else {
+                isPromoted = true;
+                displayLvl = slider - 20;
+                // Niveles base ganados hasta el 20 + niveles promocionados
+                effectiveGrowthLevels = (20 - baseLvl) + (displayLvl - 1);
+            }
+        }
+
+        // Actualizar UI de nivel
+        lvlOut.innerText = displayLvl;
+        starIcon.className = isPromoted ? 'star active-star' : 'star';
+
+        // Calcular Stats
+        document.querySelectorAll('#statsBody tr').forEach(row => {
+            const base = parseFloat(row.querySelector('.base').value) || 0;
+            const growth = (parseFloat(row.querySelector('.growth').value) || 0) / 100;
+            const promoBonus = parseFloat(row.querySelector('.promo').value) || 0;
+            const cap = parseFloat(row.querySelector('.cap').value) || 30;
+            const resCell = row.querySelector('.res');
+
+            let total = base + (growth * effectiveGrowthLevels);
+            
+            // Aplicar bono solo si la unidad es promocionada 
+            // Y no empezó ya promocionada (ya que sus bases ya incluirían el bono)
+            // Nota: En FE, si una unidad "ya viene" promocionada, no sumas bonos extra, usas sus bases.
+            if (isPromoted && !prePromoted) {
+                total += promoBonus;
+            }
+
+            // Aplicar Cap (Tope)
+            if (total >= cap) {
+                resCell.innerText = cap;
+                resCell.classList.add('stat-cap-reached');
+            } else {
+                resCell.innerText = total.toFixed(1);
+                resCell.classList.remove('stat-cap-reached');
+            }
+        });
+    }
+
+    // Eventos
+    document.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
+    window.onload = calculate;
+</script>
+
+</body>
+</html>
